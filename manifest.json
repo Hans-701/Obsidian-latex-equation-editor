@@ -1,0 +1,10 @@
+{
+	"id": "latex-suite-plugin",
+	"name": "LaTeX Suite",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Mejora la experiencia de escritura de LaTeX con una barra de herramientas y vista previa en vivo.",
+	"author": "Hans Balta",
+	"authorUrl": "https://tu-website.com",
+	"isDesktopOnly": false
+}
