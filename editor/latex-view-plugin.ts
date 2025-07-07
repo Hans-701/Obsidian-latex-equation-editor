@@ -3,65 +3,63 @@
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { renderMath, finishRenderMath } from 'obsidian';
+import type LaTeXSuitePlugin from "main";
 
-export const buildLatexViewPlugin = (panel: HTMLDivElement, previewPanel: HTMLDivElement) => {
+export const buildLatexViewPlugin = (plugin: LaTeXSuitePlugin) => {
     return ViewPlugin.fromClass(class {
         private animationFrame: number = 0;
 
         update(update: ViewUpdate) {
             if (!update.docChanged && !update.selectionSet && !update.geometryChanged && !update.focusChanged) return;
             if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
-            this.animationFrame = requestAnimationFrame(() => this.handleVisibility(update.view, previewPanel));
+            this.animationFrame = requestAnimationFrame(() => this.handleVisibility(update.view));
         }
 
-        handleVisibility(view: EditorView, previewPanel: HTMLDivElement) {
+        handleVisibility(view: EditorView) {
             if (!view.dom.isConnected) return;
             
             const latexBlock = this.getLatexBlock(view.state);
 
             if (latexBlock && view.hasFocus) {
+                if (!plugin.latexSuitePanel) {
+                    plugin.initializeUI();
+                }
+
+                const panel = plugin.latexSuitePanel;
+                const previewPanel = plugin.previewEl;
+                
                 panel.removeClass('hidden');
                 
                 previewPanel.empty();
                 const mathEl = renderMath(latexBlock.content, latexBlock.display);
                 previewPanel.appendChild(mathEl);
                 finishRenderMath();
-                
-                // --- INICIO DE LA LÓGICA DE POSICIONAMIENTO DEFINITIVA ---
-                const panelHeight = panel.offsetHeight;
-                const margin = 15;
 
-                // Obtenemos las coordenadas del bloque COMPLETO, no solo de la línea del cursor
                 const startCoords = view.coordsAtPos(latexBlock.from);
                 const endCoords = view.coordsAtPos(latexBlock.to);
-
-                // Si el bloque no está renderizado en la vista, no hacemos nada
                 if (!startCoords || !endCoords) return;
 
+                const panelHeight = panel.offsetHeight;
+                const margin = 15;
                 const editorRect = view.dom.getBoundingClientRect();
                 const spaceBelow = window.innerHeight - endCoords.bottom;
 
-                // ¿Hay suficiente espacio debajo del bloque completo?
                 if (spaceBelow > panelHeight + margin) {
-                    // Sí -> Posicionamos el panel DEBAJO del bloque
                     panel.style.top = `${endCoords.bottom + margin}px`;
-                    panel.style.bottom = 'auto'; // Reseteamos la propiedad 'bottom'
+                    panel.style.bottom = 'auto';
                     panel.removeClass('is-rendered-above');
                 } else {
-                    // No -> Posicionamos el panel ARRIBA del bloque
-                    // Anclamos la parte INFERIOR del panel para que crezca hacia ARRIBA
                     panel.style.bottom = `${window.innerHeight - startCoords.top + margin}px`;
-                    panel.style.top = 'auto'; // Reseteamos la propiedad 'top'
+                    panel.style.top = 'auto';
                     panel.addClass('is-rendered-above');
                 }
-
-                // El centrado horizontal no cambia.
                 panel.style.left = `${editorRect.left + (editorRect.width / 2)}px`;
                 panel.style.transform = 'translateX(-50%)';
-                // --- FIN DE LA LÓGICA DE POSICIONAMIENTO DEFINITIVA ---
 
             } else {
-                panel.addClass('hidden');
+                if (plugin.latexSuitePanel) {
+                    plugin.latexSuitePanel.addClass('hidden');
+                }
             }
         }
 
@@ -69,7 +67,8 @@ export const buildLatexViewPlugin = (panel: HTMLDivElement, previewPanel: HTMLDi
             const pos = state.selection.main.head;
             const doc = state.doc.toString();
             
-            const displayRegex = /\$\$([\s\S]*?)\$\$/gs;
+            // LÍNEA CORREGIDA: Se ha eliminado la bandera 's'
+            const displayRegex = /\$\$([\s\S]*?)\$\$/g;
             let displayMatch;
             while ((displayMatch = displayRegex.exec(doc)) !== null) {
                 const from = displayMatch.index;
@@ -78,7 +77,6 @@ export const buildLatexViewPlugin = (panel: HTMLDivElement, previewPanel: HTMLDi
                     return { from, to, content: displayMatch[1], display: true };
                 }
             }
-
             const inlineRegex = /(?<!\$)\$([^\$\n]*?)\$(?!\$)/g;
             let inlineMatch;
             while ((inlineMatch = inlineRegex.exec(doc)) !== null) {
@@ -88,7 +86,6 @@ export const buildLatexViewPlugin = (panel: HTMLDivElement, previewPanel: HTMLDi
                     return { from, to, content: inlineMatch[1], display: false };
                 }
             }
-        
             return null;
         }
 

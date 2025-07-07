@@ -1,23 +1,29 @@
 # LaTeX Suite para Obsidian
 
-**LaTeX Suite** es un complemento para Obsidian diseñado para mejorar y simplificar la experiencia de escritura de ecuaciones LaTeX. El objetivo es reducir la curva de aprendizaje y la fricción de tener que recordar y escribir manualmente todos los comandos, ofreciendo una interfaz visual e interactiva en tiempo real.
+**LaTeX Suite** es un complemento para Obsidian diseñado para transformar la escritura de ecuaciones LaTeX en una experiencia fluida, intuitiva y potente. Olvídate de la fricción de recordar comandos complejos; con una interfaz inteligente y adaptable, podrás concentrarte en lo que realmente importa: tus ecuaciones.
 
 ## Características Principales
 
-✨ **Barra de Herramientas Flotante:** Una barra de herramientas contextual aparece automáticamente cuando el cursor entra en un bloque de LaTeX (`$...$` o `$$...$$`).
+✨ **Panel de Ecuaciones Inteligente y Adaptativo**
+Un panel de control completo que aparece automáticamente al entrar en un entorno LaTeX (`$...$` o `$$...$$`). Su posición es inteligente: se mostrará debajo de tu ecuación si hay espacio, o se moverá elegantemente arriba si estás al final de la página, asegurando que nunca pierdas de vista tu trabajo.
 
-📚 **Símbolos por Categorías:** Los botones están organizados para un acceso rápido y fácil a letras griegas, operadores, fracciones y más. (Nota: esta funcionalidad se puede ampliar en el futuro).
+📚 **Organización por Pestañas**
+Cientos de símbolos y comandos están organizados en categorías claras y accesibles mediante pestañas. Encuentra rápidamente lo que necesitas, desde "Frecuentes" y "Símbolos Griegos" hasta "Matrices" y "Delimitadores", sin sentirte abrumado.
 
-⚡ **Vista Previa en Vivo:** Obtén una vista renderizada de tu ecuación justo debajo de la línea que estás editando, la cual se actualiza instantáneamente con cada cambio.
+⚡ **Vista Previa Integrada y Dinámica**
+Obtén una vista renderizada de tu ecuación en tiempo real. La vista previa está integrada en el panel y, al igual que este, se adapta: se muestra en la parte superior para un acceso rápido, pero se mueve a la parte inferior cuando el panel aparece arriba, manteniéndose siempre cerca de la acción.
 
-🧠 **Cursor Inteligente:** Al insertar comandos complejos como `\frac{}{}` o `\sqrt{}`, el cursor se posiciona automáticamente dentro de las llaves, listo para que continúes escribiendo.
+🧠 **Función "Envolver" y Cursor Inteligente**
+Acelera tu flujo de trabajo de manera exponencial. Selecciona un texto como `x^2`, haz clic en el botón de fracción, y el plugin lo convertirá automáticamente en `\frac{x^2}{}`. El cursor se posicionará de forma inteligente en el siguiente campo vacío, listo para que continúes. Esto también funciona para delimitadores, raíces y otros comandos.
 
-🚀 **Comando Rápido:** Usa la paleta de comandos (`Ctrl/Cmd + P`) para insertar rápidamente un bloque de ecuación (`$$...$$`) y empezar a trabajar.
+🚀 **Auto-Espaciado para Símbolos**
+Al insertar símbolos simples como `\beta` o `\int`, el plugin añade automáticamente un espacio al final, permitiéndote seguir escribiendo sin interrumpir la sintaxis de LaTeX.
 
 ## Cómo Funciona
 
-El plugin utiliza la API del editor de Obsidian para detectar la posición del cursor. Cuando identifica que estás dentro de un entorno matemático, crea dinámicamente dos elementos flotantes: una barra de herramientas con botones preconfigurados y un panel de vista previa.
+El plugin utiliza la API del editor de Obsidian y un **ViewPlugin** de CodeMirror 6 para monitorear el editor.
 
--   **Inserción:** Al hacer clic en un botón, el plugin inserta el código LaTeX correspondiente y ajusta la posición del cursor si es necesario. Se utiliza el evento `mousedown` para evitar que el editor pierda el foco, garantizando una experiencia fluida.
--   **Renderizado:** El texto de la ecuación se extrae en tiempo real y se pasa a la función de renderizado nativa de Obsidian, mostrando el resultado al instante en el panel de vista previa.
--   **Posicionamiento:** La posición de la interfaz se calcula dinámicamente usando `requestAnimationFrame` para asegurar un rendimiento óptimo y evitar errores visuales.
+-   **Detección de Contexto**: Identifica si el cursor está dentro de un entorno matemático (`$$...$$` o `$..$`), reconociendo la totalidad del bloque para un posicionamiento preciso.
+-   **Inicialización Diferida (Lazy Initialization)**: Para garantizar un rendimiento óptimo y cero errores de carga, la interfaz gráfica solo se construye la primera vez que se necesita, asegurando que todos los componentes de Obsidian estén listos.
+-   **Posicionamiento Adaptativo**: El plugin calcula el espacio disponible en la ventana y decide si mostrar el panel arriba o abajo de tu bloque de ecuación, reordenando sus propios elementos internos para una máxima comodidad.
+-   **Inserción Inteligente**: Al hacer clic en un botón, el plugin comprueba si hay texto seleccionado para aplicar la lógica de "envolver". Si no, inserta el comando y posiciona el cursor de forma inteligente usando la información definida en sus archivos de datos modulares.
