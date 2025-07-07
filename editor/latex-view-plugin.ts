@@ -1,65 +1,80 @@
+// en editor/latex-view-plugin.ts
+
 import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { renderMath, finishRenderMath } from 'obsidian';
 
-export const buildLatexViewPlugin = (toolbar: HTMLDivElement, previewPanel: HTMLDivElement) => {
+export const buildLatexViewPlugin = (panel: HTMLDivElement, previewPanel: HTMLDivElement) => {
     return ViewPlugin.fromClass(class {
         private animationFrame: number = 0;
 
         update(update: ViewUpdate) {
-            // Se añade !update.focusChanged para que la lógica se ejecute también cuando cambia el foco
             if (!update.docChanged && !update.selectionSet && !update.geometryChanged && !update.focusChanged) return;
             if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
-            this.animationFrame = requestAnimationFrame(() => this.handleVisibility(update.view));
+            this.animationFrame = requestAnimationFrame(() => this.handleVisibility(update.view, previewPanel));
         }
 
-        handleVisibility(view: EditorView) {
+        handleVisibility(view: EditorView, previewPanel: HTMLDivElement) {
             if (!view.dom.isConnected) return;
             
             const latexBlock = this.getLatexBlock(view.state);
 
             if (latexBlock && view.hasFocus) {
-                toolbar.removeClass('hidden');
-                previewPanel.removeClass('hidden');
+                panel.removeClass('hidden');
                 
                 previewPanel.empty();
                 const mathEl = renderMath(latexBlock.content, latexBlock.display);
                 previewPanel.appendChild(mathEl);
                 finishRenderMath();
                 
-                const coords = view.coordsAtPos(view.state.selection.main.head);
-                if (coords) {
-                    // --- INICIO DE LA NUEVA LÓGICA DE POSICIONAMIENTO ---
+                // --- INICIO DE LA LÓGICA DE POSICIONAMIENTO DEFINITIVA ---
+                const panelHeight = panel.offsetHeight;
+                const margin = 15;
 
-                    // 1. Posiciona la barra de botones DEBAJO de la línea de texto.
-                    const toolbarTop = coords.bottom + 10; // 10px de margen inferior
-                    toolbar.style.top = `${toolbarTop}px`;
-                    toolbar.style.left = `${coords.left}px`;
+                // Obtenemos las coordenadas del bloque COMPLETO, no solo de la línea del cursor
+                const startCoords = view.coordsAtPos(latexBlock.from);
+                const endCoords = view.coordsAtPos(latexBlock.to);
 
-                    // 2. Posiciona el panel de vista previa DEBAJO de la barra de botones.
-                    // Se calcula usando la posición de la barra + su altura + un margen.
-                    const previewTop = toolbarTop + toolbar.offsetHeight + 5; // 5px de margen
-                    previewPanel.style.top = `${previewTop}px`;
-                    previewPanel.style.left = `${coords.left}px`;
+                // Si el bloque no está renderizado en la vista, no hacemos nada
+                if (!startCoords || !endCoords) return;
 
-                    // --- FIN DE LA NUEVA LÓGICA DE POSICIONAMIENTO ---
+                const editorRect = view.dom.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - endCoords.bottom;
+
+                // ¿Hay suficiente espacio debajo del bloque completo?
+                if (spaceBelow > panelHeight + margin) {
+                    // Sí -> Posicionamos el panel DEBAJO del bloque
+                    panel.style.top = `${endCoords.bottom + margin}px`;
+                    panel.style.bottom = 'auto'; // Reseteamos la propiedad 'bottom'
+                    panel.removeClass('is-rendered-above');
+                } else {
+                    // No -> Posicionamos el panel ARRIBA del bloque
+                    // Anclamos la parte INFERIOR del panel para que crezca hacia ARRIBA
+                    panel.style.bottom = `${window.innerHeight - startCoords.top + margin}px`;
+                    panel.style.top = 'auto'; // Reseteamos la propiedad 'top'
+                    panel.addClass('is-rendered-above');
                 }
+
+                // El centrado horizontal no cambia.
+                panel.style.left = `${editorRect.left + (editorRect.width / 2)}px`;
+                panel.style.transform = 'translateX(-50%)';
+                // --- FIN DE LA LÓGICA DE POSICIONAMIENTO DEFINITIVA ---
+
             } else {
-                toolbar.addClass('hidden');
-                previewPanel.addClass('hidden');
+                panel.addClass('hidden');
             }
         }
 
         getLatexBlock(state: EditorState): { from: number, to: number, content: string, display: boolean } | null {
             const pos = state.selection.main.head;
             const doc = state.doc.toString();
-
-            const displayRegex = /\$\$(.*?)\$\$/gs;
+            
+            const displayRegex = /\$\$([\s\S]*?)\$\$/gs;
             let displayMatch;
             while ((displayMatch = displayRegex.exec(doc)) !== null) {
                 const from = displayMatch.index;
                 const to = from + displayMatch[0].length;
-                if (pos >= from + 2 && pos <= to - 2) {
+                if (pos >= from && pos <= to) {
                     return { from, to, content: displayMatch[1], display: true };
                 }
             }
